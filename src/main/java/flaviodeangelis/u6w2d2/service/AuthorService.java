@@ -1,5 +1,7 @@
 package flaviodeangelis.u6w2d2.service;
 
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import flaviodeangelis.u6w2d2.entities.Author;
 import flaviodeangelis.u6w2d2.exception.BadRequestException;
 import flaviodeangelis.u6w2d2.exception.NotFoundException;
@@ -7,13 +9,17 @@ import flaviodeangelis.u6w2d2.payload.NewAuthorDTO;
 import flaviodeangelis.u6w2d2.repository.AuthorRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @Service
 public class AuthorService {
     @Autowired
     private AuthorRepository authorRepository;
+    @Autowired
+    private Cloudinary cloudinary;
 
     public Author save(NewAuthorDTO body) {
         authorRepository.findByEmail(body.email()).ifPresent(author -> {
@@ -54,5 +60,18 @@ public class AuthorService {
         found.setBirthDate(body.getBirthDate());
         found.setAvatar(body.getAvatar());
         return authorRepository.save(found);
+    }
+
+    public String uploadAvatar(MultipartFile file, long id, Author body) throws IOException, NotFoundException {
+        Author found = this.findById(id);
+        String avatarURL = (String) cloudinary.uploader().upload(file.getBytes(), ObjectUtils.emptyMap()).get("url");
+        found.setId(id);
+        found.setName(body.getName());
+        found.setSurname(body.getSurname());
+        found.setEmail(body.getEmail());
+        found.setBirthDate(body.getBirthDate());
+        found.setAvatar(avatarURL);
+        authorRepository.save(found);
+        return avatarURL;
     }
 }
